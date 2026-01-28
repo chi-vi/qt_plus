@@ -1,10 +1,18 @@
+# ==========================================
+# NOUN PHRASE RULES (Cụm Danh Từ)
+# ==========================================
+
+# 1. Adj + Noun -> Noun + Adj
+# Example: 美丽(a) 花(n) -> Hoa Đẹp
 - desc: "Adj + Noun -> Noun + Adj"
   rank: 2
   match_pos: ["a", "n"]
   match_tok: ["", ""]
   reordering: [1, 0]
 
-- desc: "De phrase reordering"
+# 2. Possessive: Noun/Pronoun + de + Noun -> Noun + của + Noun/Pronoun
+# Example: 我(r) 的(u) 书(n) -> Sách của Tôi
+- desc: "Pronoun + de + Noun -> Noun + của + Pronoun"
   rank: 3
   match_pos: ["r", "u", "n"]
   match_tok: ["", "的", ""]
@@ -12,10 +20,344 @@
   overriding:
     1: "của"
 
-- desc: "Generic Noun Phrase with De"
+- desc: "Noun + de + Noun -> Noun + của + Noun"
   rank: 2
   match_pos: ["n", "u", "n"]
   match_tok: ["", "的", ""]
   reordering: [2, 1, 0]
   overriding:
     1: "của"
+
+# 3. Demonstrative NP: Dem + Measure + Noun -> Measure + Noun + Dem
+# Example: 这(r) 本(q) 书(n) -> Cuốn sách này
+# Note: "Zhe/Na" are pronouns 'r' in some parsers, or 'r' in LTP.
+- desc: "Dem + Measure + Noun -> Measure + Noun + Dem"
+  rank: 3
+  match_pos: ["r", "q", "n"]
+  # Check simplistic match for Zhe/Na usually
+  match_tok: ["", "", ""]
+  reordering: [1, 2, 0]
+
+# 4. Quantity: Num + Measure + Noun -> Num + Measure + Noun (No change usually, but keeping rule for score)
+# Example: 三(m) 个(q) 人(n) -> Ba người
+- desc: "Num + Measure + Noun (Identity)"
+  rank: 1
+  match_pos: ["m", "q", "n"]
+  match_tok: ["", "", ""]
+  # reordering: [0, 1, 2] # Default
+
+# 5. Multi-Adjective: Adj + Adj + Noun -> Noun + Adj + Adj (or N + A + và + A?)
+# Example: 聪明(a) 勇敢(a) 的(u) 人(n) -> Người thông minh dũng cảm
+- desc: "Adj + Adj + de + Noun -> Noun + Adj + Adj"
+  rank: 3
+  match_pos: ["a", "a", "u", "n"]
+  match_tok: ["", "", "的", ""]
+  reordering: [3, 0, 1] # Skip 'de'
+
+# 6. Modifier Noun: Noun(Attr) + Noun(Head) -> Noun(Head) + Noun(Attr)
+# Example: 科学(n) 研究(n) -> Nghiên cứu khoa học
+- desc: "Noun(Attr) + Noun(Head) -> Swap"
+  rank: 1 # Low rank because NN compounds are ambiguous (e.g. Ren Lei = Human Kind -> identity)
+  match_pos: ["n", "n"]
+  match_tok: ["", ""]
+  reordering: [1, 0]
+
+# ==========================================
+# VERB PHRASE RULES (Cụm Động Từ)
+# ==========================================
+
+# 7. Preposition Loc: Zai + Loc + Verb -> Verb + Zai + Loc
+# Example: 在(p) 家(n) 吃(v) -> Ăn ở nhà
+- desc: "Zai + Loc + Verb -> Verb + at + Loc"
+  rank: 3
+  match_pos: ["p", "n", "v"]
+  match_tok: ["在", "", ""]
+  reordering: [2, 0, 1]
+  overriding:
+    0: "ở"
+
+# 8. Time Duration: Verb + Duration -> Verb + Duration (Identity)
+# But sometimes: Verb + le + Time -> Verb + Time + roi? matching specific particles.
+
+# 9. Manner: Adv (Adj+de) + Verb -> Verb + Adv
+# Example: 快(a) 快(a) 地(u) 跑(v) -> Chạy nhanh nhanh
+- desc: "Adj + Adj + de + Verb -> Verb + Adj + Adj"
+  rank: 3
+  match_pos: ["a", "a", "u", "v"]
+  match_tok: ["", "", "地", ""]
+  reordering: [3, 0, 1]
+
+# 10. Simple Manner: Adv + Verb -> Verb + Adv (Specific adverbs)
+# Example: 经常(d) 去(v) -> Hay đi / Đi thường xuyên?
+# Vietnamese implies frequency before verb often "Hay đi".
+# But "Kuai Pao" (Fast Run) -> "Chay Nhanh".
+# This is context dependent. Let's add a specific rule for "Man Man" (Slowly).
+- desc: "Man Man (Slowly) + Verb -> Verb + Tu Tu"
+  rank: 4
+  match_pos: ["a", "a", "v"]
+  match_tok: ["慢", "慢", ""]
+  reordering: [2, 0, 1]
+  overriding:
+    1: "từ từ" # Change second 'man' to phrase, ignore first? or map both?
+    # Better: Update 0="từ từ", drop 1? Or just identity.
+
+# 11. Duo/Shao + Verb -> Verb + Nhieu/It
+# Example: 多(a) 吃(v) -> Ăn nhiều
+- desc: "Duo + Verb -> Verb + Nhieu"
+  rank: 4
+  match_pos: ["a", "v"]
+  match_tok: ["多", ""]
+  reordering: [1, 0]
+  overriding:
+    0: "nhiều"
+
+- desc: "Shao + Verb -> Verb + It"
+  rank: 4
+  match_pos: ["a", "v"]
+  match_tok: ["少", ""]
+  reordering: [1, 0]
+  overriding:
+    0: "ít"
+
+# 12. Modal verbs: Neng/Keyi + Verb -> Co the + Verb (Identity order)
+# Example: 能(v) 做(v) -> Có thể làm
+- desc: "Neng + Verb -> Co the + Verb"
+  rank: 3
+  match_pos: ["v", "v"]
+  match_tok: ["能", ""]
+  reordering: [0, 1]
+  overriding:
+    0: "có thể"
+
+# ==========================================
+# SPECIAL CONSTRUCTIONS
+# ==========================================
+
+# 13. Passive 'Bei': Receiver + Bei + Agent + Verb -> Receiver + Bi + Agent + Verb
+# Example: 我(r) 被(p) 他(r) 打(v) -> Tôi bị anh ta đánh
+- desc: "Bei structure"
+  rank: 3
+  match_pos: ["p", "r", "v"]
+  match_tok: ["被", "", ""]
+  reordering: [0, 1, 2] # Identity
+  overriding:
+    0: "bị" # Or "được" context dependent, "bị" is safer for negative
+
+# 14. Disposal 'Ba': Subject + Ba + Object + Verb -> Subject + Verb + Object
+# Example: 我(r) 把(p) 书(n) 拿(v) -> Tôi cầm sách (I take book)
+# Note: Often "Ba + Obj + Verb + Complements". Simplified here.
+- desc: "Ba + Obj + Verb -> Verb + Obj"
+  rank: 3
+  match_pos: ["p", "n", "v"]
+  match_tok: ["把", "", ""]
+  reordering: [2, 1] # Drop 'Ba' (index 0)
+
+# 15. Comparision 'Bi': A + Bi + B + Adj -> A + Adj + Hon + B
+# Example: 我(r) 比(p) 你(r) 高(a) -> Tôi cao hơn bạn
+- desc: "A + Bi + B + Adj -> A + Adj + Hon + B"
+  rank: 4
+  match_pos: ["r", "p", "r", "a"]
+  match_tok: ["", "比", "", ""]
+  reordering: [0, 3, 1, 2] # r(0), a(3), p(1), r(2)
+  overriding:
+    1: "hơn"
+
+# 16. Verb + 'De' + Complement (Degree)
+# Example: 跑(v) 得(u) 快(a) -> Chạy nhanh (Drop 'de')
+- desc: "Verb + De + Adj -> Verb + Adj"
+  rank: 3
+  match_pos: ["v", "u", "a"]
+  match_tok: ["", "得", ""]
+  reordering: [0, 2]
+
+# 17. 'Shi... De' Construction (Emphatic)
+# Example: 是(v) 我(r) 做(v) 的(u) -> Là tôi làm (Drop last 'de' usually or keep as affirm)
+# VN: Là tôi làm.
+- desc: "Shi + ... + De -> La + ... (Drop De)"
+  rank: 2
+  match_pos: ["v", "r", "v", "u"]
+  match_tok: ["是", "", "", "的"]
+  reordering: [0, 1, 2]
+  overriding:
+    0: "là"
+
+# ==========================================
+# PARTICLES & SUFFIXES
+# ==========================================
+
+# 18. Verb + Guo (Experience) -> Da Tung + Verb
+# Example: 去(v) 过(u) -> Đã từng đi
+- desc: "Verb + Guo -> Da tung + Verb"
+  rank: 3
+  match_pos: ["v", "u"]
+  match_tok: ["", "过"]
+  reordering: [1, 0]
+  overriding:
+    1: "đã từng"
+
+# 19. Verb + Le (Completed) -> Da + Verb / Verb + Roi
+# Example: 吃(v) 了(u) -> Ăn rồi / Đã ăn
+- desc: "Verb + Le -> Verb + Roi"
+  rank: 2
+  match_pos: ["v", "u"]
+  match_tok: ["", "了"]
+  reordering: [0, 1]
+  overriding:
+    1: "rồi"
+
+# 20. Verb + Zhe (Continuous) -> Dang + Verb
+# Example: 看(v) 着(u) -> Đang xem
+- desc: "Verb + Zhe -> Dang + Verb"
+  rank: 3
+  match_pos: ["v", "u"]
+  match_tok: ["", "着"]
+  reordering: [1, 0]
+  overriding:
+    1: "đang"
+
+# ==========================================
+# NEGATION
+# ==========================================
+
+# 21. Bu + Adj -> Khong + Adj
+# Example: 不(d) 好(a) -> Không tốt
+- desc: "Bu + Adj -> Khong + Adj"
+  rank: 3
+  match_pos: ["d", "a"]
+  match_tok: ["不", ""]
+  reordering: [0, 1]
+  overriding:
+    0: "không"
+
+# 22. Mei You + Verb -> Chua/Khong + Verb
+# Example: 没有(v) 去(v) -> Chưa đi
+- desc: "Meiyou + Verb -> Chua + Verb"
+  rank: 3
+  match_pos: ["v", "v"]
+  match_tok: ["没有", ""]
+  reordering: [0, 1]
+  overriding:
+    0: "chưa"
+
+# ==========================================
+# DIRECTIONS & LOCATIONS
+# ==========================================
+
+# 23. Wang + Loc + Verb -> Verb + Ve Phia + Loc
+# Example: 往(p) 南(n) 走(v) -> Đi về phía Nam
+- desc: "Wang + Loc + Verb -> Verb + ve phia + Loc"
+  rank: 4
+  match_pos: ["p", "n", "v"]
+  match_tok: ["往", "", ""]
+  reordering: [2, 0, 1]
+  overriding:
+    0: "về phía"
+
+# 24. Loc + Shang (On) -> Tren + Loc
+# Example: 桌子(n) 上(nd) -> Trên bàn (LTP might detect 'Shang' as nd/n)
+- desc: "Loc + Shang -> Tren + Loc"
+  rank: 3
+  match_pos: ["n", "nd"]
+  match_tok: ["", "上"]
+  reordering: [1, 0]
+  overriding:
+    1: "trên"
+
+# 25. Loc + Xia (Under) -> Duoi + Loc
+- desc: "Loc + Xia -> Duoi + Loc"
+  rank: 3
+  match_pos: ["n", "nd"]
+  match_tok: ["", "下"]
+  reordering: [1, 0]
+  overriding:
+    1: "dưới"
+
+# 26. Loc + Li (Inside) -> Trong + Loc
+- desc: "Loc + Li -> Trong + Loc"
+  rank: 3
+  match_pos: ["n", "nd"]
+  match_tok: ["", "里"]
+  reordering: [1, 0]
+  overriding:
+    1: "trong"
+
+# ==========================================
+# IDIOMATIC / SPECIFIC
+# ==========================================
+
+# 27. Wei Le ... (In order to) -> De ...
+# Example: 为了(p) 生活(n) -> Để sống
+- desc: "Wei Le ... -> De ..."
+  rank: 3
+  match_pos: ["p", "v"] # Or n
+  match_tok: ["为了", ""]
+  reordering: [0, 1]
+  overriding:
+    0: "để"
+
+# 28. Yin Wei (Because) ... Suo Yi (So) -> Vi ... Nen
+- desc: "Yin Wei -> Vi"
+  rank: 3
+  match_pos: ["c"]
+  match_tok: ["因为"]
+  reordering: [0]
+  overriding:
+    0: "vì"
+
+- desc: "Suo Yi -> Nen"
+  rank: 3
+  match_pos: ["c"]
+  match_tok: ["所以"]
+  reordering: [0]
+  overriding:
+    0: "nên"
+
+# 29. Sui Ran (Although) ... Dan Shi (But) -> Tuy ... Nhung
+- desc: "Sui Ran -> Tuy"
+  rank: 3
+  match_pos: ["c"]
+  match_tok: ["虽然"]
+  reordering: [0]
+  overriding:
+    0: "tuy"
+
+- desc: "Dan Shi -> Nhung"
+  rank: 3
+  match_pos: ["c"]
+  match_tok: ["但是"]
+  reordering: [0]
+  overriding:
+    0: "nhưng"
+
+# 30. Bu Dan ... Er Qie (Not only ... but also) -> Khong nhung ... ma con
+- desc: "Bu Dan -> Khong nhung"
+  rank: 3
+  match_pos: ["c"]
+  match_tok: ["不但"]
+  reordering: [0]
+  overriding:
+    0: "không những"
+
+- desc: "Er Qie -> Ma con"
+  rank: 3
+  match_pos: ["c"]
+  match_tok: ["而且"]
+  reordering: [0]
+  overriding:
+    0: "mà còn"
+
+# 31. Time/Duration: Den + Time
+# Example: 等(v) 了(u) 一(m) 天(q) -> Đợi một ngày (Identity)
+# But: "Deng le san tian" -> "Doi 3 ngay roi" is better?
+# Keeping identity for basic quantity.
+
+# 32. Name + Men (Plural) -> Cac + Name
+# Example: 同学(n) 们(k) -> Các bạn học
+# LTP tags suffix as 'k' usually?
+- desc: "Noun + Men -> Cac + Noun"
+  rank: 3
+  match_pos: ["n", "k"]
+  match_tok: ["", "们"]
+  reordering: [1, 0]
+  overriding:
+    1: "các"
