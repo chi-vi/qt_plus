@@ -1,0 +1,16 @@
+- name: "Adj + Noun -> Noun + Adj"
+  pattern:
+    - pos: "a" # Adjective
+    - pos: "n" # Noun
+  actions:
+    - type: "swap"
+      args: [0, 1]
+
+- name: "Fix meaning of 'de' when used as possessive"
+  pattern:
+    - word: "的"
+      pos: "u"
+    - pos: "n"
+  actions:
+    - type: "update_meaning"
+      args: [0, "của"]

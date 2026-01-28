@@ -1,0 +1,13 @@
+name: cv_translator
+version: 0.1.0
+
+authors:
+  - NPN <me@npn.am>
+
+targets:
+  cv_translator:
+    main: src/cv_translator.cr
+
+crystal: '>= 1.19.1'
+
+license: MIT
