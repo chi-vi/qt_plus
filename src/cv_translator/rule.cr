@@ -2,54 +2,70 @@ require "yaml"
 require "./token"
 
 module CvTranslator
-  # A Condition checks if a token matches certain criteria.
-  # Currently supports matching by POS tag.
-  class Condition
-    include YAML::Serializable
-
-    property pos : String?
-    property word : String?
-
-    def initialize(@pos : String? = nil, @word : String? = nil)
-    end
-
-    def match?(token : Token) : Bool
-      if p = @pos
-        return false unless token.pos == p
-      end
-      if w = @word
-        return false unless token.word == w
-      end
-      true
-    end
-  end
-
-  # An Action defines what to do when a rule matches.
-  # We use a discriminator or just loose parsing to handle different action types.
-  # For simplicity in this iteration, let's use a structured approach that can be mapped from YAML.
-  class Action
-    include YAML::Serializable
-
-    # Action types: "swap", "update_meaning", "noop"
-    property type : String
-
-    # Arguments for the action
-    # For swap: [index1, index2] (relative to the match match start)
-    # For update_meaning: [index, new_meaning]
-    property args : Array(String | Int32)
-
-    def initialize(@type : String, @args : Array(String | Int32))
-    end
-  end
-
   class Rule
     include YAML::Serializable
 
-    property name : String
-    property pattern : Array(Condition)
-    property actions : Array(Action)
+    property desc : String
+    property rank : Int32
+    # "match_pos" is required, defines the sequence of POS tags
+    @[YAML::Field(key: "match_pos")]
+    property match_pos : Array(String)
 
-    def initialize(@name : String, @pattern : Array(Condition), @actions : Array(Action))
+    # "match_tok" is optional. If present, it must match the word at that position.
+    # Empty string "" means "match anything".
+    @[YAML::Field(key: "match_tok")]
+    property match_tok : Array(String)?
+
+    # "reordering" is optional. Defines new order of indices.
+    property reordering : Array(Int32)?
+
+    # "overriding" is optional map of index -> new meaning
+    property overriding : Hash(Int32, String)?
+
+    def initialize(@desc : String, @rank : Int32, @match_pos : Array(String),
+                   @match_tok : Array(String)? = nil, @reordering : Array(Int32)? = nil,
+                   @overriding : Hash(Int32, String)? = nil)
+    end
+
+    def length : Int32
+      match_pos.size
+    end
+
+    # Specificity = Number of non-empty tokens in match_tok
+    def specificity : Int32
+      return 0 unless tok = match_tok
+      tok.count { |t| !t.empty? }
+    end
+
+    # Weight calculation for DP
+    def weight : Int32
+      (rank * 100) + (length * 10) + specificity
+    end
+
+    def match?(tokens : Array(Token), start_index : Int32) : Bool
+      return false if start_index + length > tokens.size
+
+      length.times do |i|
+        token = tokens[start_index + i]
+
+        # Check POS
+        required_pos = match_pos[i]
+        # Allow checking simplified POS prefix? e.g. "n" matches "nh", "ni"?
+        # For now, strict match or maybe simple casing? Let's assume strict match as per user request example.
+        return false unless token.pos == required_pos
+
+        # Check Token if specified
+        if toks = match_tok
+          # Ensure checks bound
+          if i < toks.size
+            required_word = toks[i]
+            unless required_word.empty?
+              return false unless token.word == required_word
+            end
+          end
+        end
+      end
+      true
     end
   end
 end

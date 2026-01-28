@@ -10,5 +10,9 @@ module CvTranslator
 
     def initialize(@word : String, @pos : String, @meaning : String)
     end
+
+    def clone
+      Token.new(@word, @pos, @meaning)
+    end
   end
 end

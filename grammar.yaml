@@ -1,16 +1,21 @@
-- name: "Adj + Noun -> Noun + Adj"
-  pattern:
-    - pos: "a" # Adjective
-    - pos: "n" # Noun
-  actions:
-    - type: "swap"
-      args: [0, 1]
+- desc: "Adj + Noun -> Noun + Adj"
+  rank: 2
+  match_pos: ["a", "n"]
+  match_tok: ["", ""]
+  reordering: [1, 0]
 
-- name: "Fix meaning of 'de' when used as possessive"
-  pattern:
-    - word: "的"
-      pos: "u"
-    - pos: "n"
-  actions:
-    - type: "update_meaning"
-      args: [0, "của"]
+- desc: "De phrase reordering"
+  rank: 3
+  match_pos: ["r", "u", "n"]
+  match_tok: ["", "的", ""]
+  reordering: [2, 1, 0]
+  overriding:
+    1: "của"
+
+- desc: "Generic Noun Phrase with De"
+  rank: 2
+  match_pos: ["n", "u", "n"]
+  match_tok: ["", "的", ""]
+  reordering: [2, 1, 0]
+  overriding:
+    1: "của"

@@ -28,23 +28,13 @@ result = engine.translate(tokens)
 puts "\nTranslated:"
 puts result.map { |t| "#{t.word}(#{t.pos}):#{t.meaning}" }.join(" ")
 
-# Example 2: "我的 书" (My Book) -> "tôi" + "đích" (original LTP meaning usually generic) + "sách"
-# Expect: "tôi của sách" -> "sách của tôi" (if we had pronoun rules, but here testing the 'de' rule)
-# Actually, Chinese is Pronoun + de + Noun.
+# Example 2: "我 的 书" (My Book) -> "tôi" + "đích" + "sách"
+# Expect: "sách của tôi" (reorder 2, 1, 0 and update 1='của')
 tokens2 = [
   Token.new("我", "r", "tôi"),
   Token.new("的", "u", "đích"),
   Token.new("书", "n", "sách"),
 ]
-# Wait, my Swap rule was Adj+Noun.
-# Pronoun+de+Noun is Noun+de+Pronoun in VN?
-# "My book" -> "Sách của tôi".
-# So: "r" + "u" + "n" -> "n" + "u" + "r"?
-# My sample rule only swaps Adj+Noun. And updates 'de'.
-# Let's add a rule for the demo script quickly if we want to show it working, or just rely on what we have.
-# The sample rule updates 'de' to 'của'.
-# It doesn't swap 'r' and 'n'.
-# Let's just run it and see the update match works.
 
 puts "\nOriginal 2:"
 puts tokens2.map { |t| "#{t.word}(#{t.pos}):#{t.meaning}" }.join(" ")
